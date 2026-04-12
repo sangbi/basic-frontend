@@ -18,6 +18,7 @@ export default function SessionsPage() {
         const result = await getActiveSessions();
         setRows(result.data);
       } catch (error) {
+        console.log(error);
         showError("활성 세션 조회에 실패했습니다.");
       } finally {
         setLoading(false);

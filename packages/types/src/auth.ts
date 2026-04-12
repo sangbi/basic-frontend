@@ -11,8 +11,11 @@ export type LoginRequest = {
 export type AuthUser = {
   userId: string;
   loginId: string;
-  name: string;
-  role: string;
+  userNm: string;
+  roldId: number;
+  roleCode: string;
+  emila: string;
+  status: string;
 };
 
 export type LoginResponse = {

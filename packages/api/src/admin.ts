@@ -9,6 +9,11 @@ import {
   MenuResponse,
   MenuRoleResponse,
   UpdateMenuRoleRequest,
+  AdminMenuResponse,
+  CreateRoleRequest,
+  UpdateRoleRequest,
+  CreateMenuRequest,
+  UpdateMenuRequest,
 } from "../../types";
 
 export async function getLoginHistories() {
@@ -63,6 +68,58 @@ export async function updateMenuRole(
 ) {
   const response = await apiClient.put<ApiResponse<string>>(
     `/admin/menu-roles/${id}`,
+    payload,
+  );
+  return response.data;
+}
+
+export async function getAdminMenus() {
+  const response =
+    await apiClient.get<ApiResponse<AdminMenuResponse[]>>("/admin/menus/me");
+  return response.data;
+}
+
+export async function getRole(id: number) {
+  const response = await apiClient.get<ApiResponse<RoleResponse>>(
+    `/admin/roles/${id}`,
+  );
+  return response.data;
+}
+
+export async function createRole(payload: CreateRoleRequest) {
+  const response = await apiClient.post<ApiResponse<string>>(
+    "/admin/roles",
+    payload,
+  );
+  return response.data;
+}
+
+export async function updateRole(id: number, payload: UpdateRoleRequest) {
+  const response = await apiClient.put<ApiResponse<string>>(
+    `/admin/roles/${id}`,
+    payload,
+  );
+  return response.data;
+}
+
+export async function getMenu(id: number) {
+  const response = await apiClient.get<ApiResponse<MenuResponse>>(
+    `/admin/menus/${id}`,
+  );
+  return response.data;
+}
+
+export async function createMenu(payload: CreateMenuRequest) {
+  const response = await apiClient.post<ApiResponse<string>>(
+    "/admin/menus",
+    payload,
+  );
+  return response.data;
+}
+
+export async function updateMenu(id: number, payload: UpdateMenuRequest) {
+  const response = await apiClient.put<ApiResponse<string>>(
+    `/admin/menus/${id}`,
     payload,
   );
   return response.data;

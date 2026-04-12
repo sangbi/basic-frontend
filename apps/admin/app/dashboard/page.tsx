@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Box, Paper, Typography } from "@mui/material";
-import { getAdminDashboardSummary } from "@repo/api";
-import type { AdminDashboardSummaryResponse } from "@repo/types";
+import { getAdminDashboardSummary, handleApiError } from "@repo/api";
 import { PageHeader, useFeedback } from "@repo/ui";
+import { useAdminAuthGuard } from "@/features/auth/useAdminAuthGuard";
 
 type SummaryCardProps = {
   title: string;
@@ -25,27 +25,24 @@ function SummaryCard({ title, value }: SummaryCardProps) {
 }
 
 export default function AdminDashboardPage() {
-  const [summary, setSummary] = useState<AdminDashboardSummaryResponse | null>(
-    null,
-  );
-  const [loading, setLoading] = useState(false);
   const { showError } = useFeedback();
+  const { loading, authorized } = useAdminAuthGuard({
+    requiredRoles: ["ADMIN"],
+    redirectTo: "/login",
+  });
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const result = await getAdminDashboardSummary();
-        setSummary(result.data);
-      } catch (error) {
-        showError("대시보드 요약 조회에 실패했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const summaryQuery = useQuery({
+    queryKey: ["admin", "dashboard", "summary"],
+    queryFn: getAdminDashboardSummary,
+    enabled: !loading && authorized,
+  });
 
-    load();
-  }, [showError]);
+  if (summaryQuery.error) {
+    handleApiError(summaryQuery.error, {
+      showError,
+      fallbackMessage: "대시보드 요약 조회에 실패했습니다.",
+    });
+  }
 
   return (
     <>
@@ -62,23 +59,21 @@ export default function AdminDashboardPage() {
       >
         <SummaryCard
           title="오늘 로그인 성공"
-          value={summary?.todayLoginSuccessCount ?? 0}
+          value={summaryQuery.data?.data.todayLoginSuccessCount ?? 0}
         />
         <SummaryCard
           title="오늘 로그인 실패"
-          value={summary?.todayLoginFailCount ?? 0}
+          value={summaryQuery.data?.data.todayLoginFailCount ?? 0}
         />
         <SummaryCard
           title="현재 활성 세션"
-          value={summary?.activeSessionCount ?? 0}
+          value={summaryQuery.data?.data.activeSessionCount ?? 0}
         />
         <SummaryCard
           title="오늘 활동 로그"
-          value={summary?.todayActivityLogCount ?? 0}
+          value={summaryQuery.data?.data.todayActivityLogCount ?? 0}
         />
       </Box>
-
-      {loading ? <Typography mt={3}>불러오는 중...</Typography> : null}
     </>
   );
 }

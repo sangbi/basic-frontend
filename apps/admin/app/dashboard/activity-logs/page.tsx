@@ -18,6 +18,7 @@ export default function ActivityLogsPage() {
         const result = await getActivityLogs();
         setRows(result.data);
       } catch (error) {
+        console.log(error);
         showError("활동 로그 조회에 실패했습니다.");
       } finally {
         setLoading(false);

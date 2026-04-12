@@ -33,7 +33,6 @@ export default function UsersPage() {
     useFeedback();
 
   const [userId, setUserId] = useState<string>("");
-  const [role, setRole] = useState<string>("");
   const [page, setPage] = useState(1);
 
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -43,7 +42,7 @@ export default function UsersPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formUserId, setFormUserId] = useState("");
   const [formPassword, setFormPassword] = useState("");
-  const [formRole, setFormRole] = useState("USER");
+  const [formRoleId, setFormRoleId] = useState(3);
   const [searchParam, setSearchParam] = useState<
     PageRequest<UserSearchCondition>
   >({
@@ -51,7 +50,6 @@ export default function UsersPage() {
     size: 10,
     condition: {
       userId: userId,
-      role: role,
     },
   });
 
@@ -71,7 +69,7 @@ export default function UsersPage() {
     setEditingId(null);
     setFormUserId("");
     setFormPassword("");
-    setFormRole("USER");
+    setFormRoleId(3);
   };
 
   const openCreateDialog = () => {
@@ -80,22 +78,16 @@ export default function UsersPage() {
     setFormOpen(true);
   };
 
-  // const info = (userId: string) =>
-  //   useQuery({
-  //     queryKey: queryKeys.infoUser(userId),
-  //     queryFn: () => infoUser({ userId }),
-  //     enabled: !!userId,
-  //   });
   const handleEdit = async (userId: string) => {
     try {
       showLoading();
-      const res = await infoUser({ userId });
+      const res = await infoUser(userId);
 
       const user = res.data;
       setFormMode("edit");
       setEditingId(user.userId);
       setFormUserId(user.userId);
-      setFormRole(user.role);
+      setFormRoleId(user.roleId);
       setFormOpen(true);
     } catch (error) {
       console.error(error);
@@ -138,6 +130,9 @@ export default function UsersPage() {
         .mutateAsync({
           userId: formUserId,
           password: formPassword,
+          roleId: formRoleId,
+          userNm: "",
+          email: "",
         })
         .finally(() => {
           hideLoading();
@@ -150,7 +145,7 @@ export default function UsersPage() {
       updateMutation
         .mutateAsync({
           userId: editingId,
-          role: formRole,
+          roleId: formRoleId,
         })
         .finally(() => {
           hideLoading();
@@ -174,13 +169,9 @@ export default function UsersPage() {
   const handleDelete = async () => {
     if (deleteTargetId == null) return;
     showLoading();
-    deleteMutation
-      .mutateAsync({
-        userId: deleteTargetId,
-      })
-      .finally(() => {
-        hideLoading();
-      });
+    deleteMutation.mutateAsync(deleteTargetId).finally(() => {
+      hideLoading();
+    });
   };
 
   const handleSearch = async () => {
@@ -198,13 +189,11 @@ export default function UsersPage() {
   const handleRefresh = async () => {
     setPage(1);
     setUserId("");
-    setRole("");
     setSearchParam({
       page: 1,
       size: 10,
       condition: {
         userId: "",
-        role: "",
       },
     });
     showInfo("검색이 완료되었습니다.");
@@ -225,7 +214,7 @@ export default function UsersPage() {
     {
       key: "role",
       header: "권한",
-      render: (row) => row.role,
+      render: (row) => row.roleCode,
     },
     {
       key: "action",
@@ -311,10 +300,10 @@ export default function UsersPage() {
         mode={formMode}
         userId={formUserId}
         password={formPassword}
-        role={formRole}
+        roleId={formRoleId}
         onChangeUserId={setFormUserId}
         onChangePassword={setFormPassword}
-        onChangeRole={setFormRole}
+        onChangeRoleId={setFormRoleId}
         onSubmit={handleSubmitForm}
         onClose={() => {
           setFormOpen(false);

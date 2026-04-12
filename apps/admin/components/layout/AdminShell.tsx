@@ -17,7 +17,7 @@ export function AdminShell({ children, userId, role }: Props) {
       <AdminHeader userId={userId} role={role} />
 
       <Box sx={{ display: "flex", height: "calc(100vh - 64px)" }}>
-        <AdminSidebar role={role} />
+        <AdminSidebar />
 
         <Box
           sx={{

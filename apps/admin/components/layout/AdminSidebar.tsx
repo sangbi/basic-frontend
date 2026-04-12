@@ -1,21 +1,30 @@
 "use client";
+"use client";
 
-import { ADMIN_MENU_ITEMS } from "@/features/navigation/menu";
+import { useEffect, useState } from "react";
 import { Box, List, ListItemButton, ListItemText, Paper } from "@mui/material";
-import { filterMenusByRole } from "@repo/auth";
 import { usePathname, useRouter } from "next/navigation";
+import { getAdminMenus } from "@repo/api";
+import type { AdminMenuResponse } from "@repo/types";
 
-type Props = {
-  role?: string;
-};
-
-export function AdminSidebar({ role }: Props) {
+export function AdminSidebar() {
   const router = useRouter();
   const pathname = usePathname();
-
+  const [menus, setMenus] = useState<AdminMenuResponse[]>([]);
   const HEADER_HEIGHT = 64;
 
-  const menus = filterMenusByRole(ADMIN_MENU_ITEMS, role);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const result = await getAdminMenus();
+        setMenus(result.data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    load();
+  }, []);
 
   return (
     <Paper
@@ -34,11 +43,15 @@ export function AdminSidebar({ role }: Props) {
         <List>
           {menus.map((menu) => (
             <ListItemButton
-              key={menu.path}
-              selected={pathname === menu.path}
-              onClick={() => router.push(menu.path)}
+              key={menu.id}
+              selected={pathname === menu.menuPath}
+              onClick={() => {
+                if (menu.menuPath) {
+                  router.push(menu.menuPath);
+                }
+              }}
             >
-              <ListItemText primary={menu.label} />
+              <ListItemText primary={menu.menuNm} />
             </ListItemButton>
           ))}
         </List>

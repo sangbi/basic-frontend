@@ -4,7 +4,7 @@ import type { ApiResponse, RefreshTokenResponse } from "@repo/types";
 
 let initialized = false;
 let isRefreshing = false;
-let pendingQueue: Array<(token: string | null) => void> = [];
+let pendingQueue: ((token: string | null) => void)[] = [];
 
 function processQueue(token: string | null) {
   pendingQueue.forEach((callback) => callback(token));

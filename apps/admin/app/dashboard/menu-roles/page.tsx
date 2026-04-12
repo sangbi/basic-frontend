@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -37,7 +37,7 @@ export default function MenuRolesPage() {
 
   const { showError, showSuccess, showLoading, hideLoading } = useFeedback();
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getMenuRoles();
@@ -48,11 +48,11 @@ export default function MenuRolesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const openDialog = (row: MenuRoleResponse) => {
     setSelected(row);

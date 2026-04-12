@@ -14,11 +14,11 @@ type Props = {
   mode: "create" | "edit";
   userId: string;
   password: string;
-  role: string;
+  roleId: number;
   loading?: boolean;
   onChangeUserId: (value: string) => void;
   onChangePassword: (value: string) => void;
-  onChangeRole: (value: string) => void;
+  onChangeRoleId: (value: number) => void;
   onSubmit: () => void;
   onClose: () => void;
 };
@@ -28,11 +28,11 @@ export function UserFormDialog({
   mode,
   userId,
   password,
-  role,
+  roleId,
   loading = false,
   onChangeUserId,
   onChangePassword,
-  onChangeRole,
+  onChangeRoleId,
   onSubmit,
   onClose,
 }: Props) {
@@ -47,10 +47,10 @@ export function UserFormDialog({
           mode={mode}
           userId={userId}
           password={password}
-          role={role}
+          roleId={roleId}
           onChangeUserId={onChangeUserId}
           onChangePassword={onChangePassword}
-          onChangeRole={onChangeRole}
+          onChangeRoleId={onChangeRoleId}
         />
       </DialogContent>
 

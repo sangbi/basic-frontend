@@ -55,6 +55,7 @@ export interface MenuResponse {
   id: number;
   menuNm: string;
   menuPath: string | null;
+  apiPath: string | null;
   parentId: number | null;
   sortOrder: number;
   icon: string | null;
@@ -79,4 +80,48 @@ export interface UpdateMenuRoleRequest {
   canCreate: string;
   canUpdate: string;
   canDelete: string;
+}
+
+export interface AdminMenuResponse {
+  id: number;
+  menuNm: string;
+  menuPath: string;
+  parentId: string;
+  sortOrder: string;
+  icon: string;
+}
+
+export interface CreateRoleRequest {
+  roleCode: string;
+  roleNm: string;
+  description: string;
+  status: string;
+}
+
+export interface UpdateRoleRequest {
+  roleNm: string;
+  description: string;
+  status: string;
+}
+
+export interface CreateMenuRequest {
+  menuNm: string;
+  menuPath: string;
+  apiPath: string;
+  parentId: number | null;
+  sortOrder: number;
+  icon: string;
+  visibleYn: string;
+  status: string;
+}
+
+export interface UpdateMenuRequest {
+  menuNm: string;
+  menuPath: string;
+  apiPath: string;
+  parentId: number | null;
+  sortOrder: number;
+  icon: string;
+  visibleYn: string;
+  status: string;
 }

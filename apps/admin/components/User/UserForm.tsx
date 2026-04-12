@@ -6,20 +6,20 @@ type Props = {
   mode: "create" | "edit";
   userId: string;
   password: string;
-  role: string;
+  roleId: number;
   onChangeUserId: (value: string) => void;
   onChangePassword: (value: string) => void;
-  onChangeRole: (value: string) => void;
+  onChangeRoleId: (value: number) => void;
 };
 
 export function UserForm({
   mode,
   userId,
   password,
-  role,
+  roleId,
   onChangeUserId,
   onChangePassword,
-  onChangeRole,
+  onChangeRoleId,
 }: Props) {
   return (
     <FormSection title={mode === "edit" ? "사용자 정보" : undefined}>
@@ -41,11 +41,11 @@ export function UserForm({
 
       <FormSelectField
         label="권한"
-        value={role}
-        onChange={(e) => onChangeRole(e.target.value)}
+        value={roleId}
+        onChange={(e) => onChangeRoleId(Number(e.target.value))}
         options={[
-          { label: "USER", value: "USER" },
-          { label: "ADMIN", value: "ADMIN" },
+          { label: "USER", value: "3" },
+          { label: "ADMIN", value: "1" },
         ]}
       />
     </FormSection>

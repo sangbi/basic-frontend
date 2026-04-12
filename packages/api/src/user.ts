@@ -11,17 +11,22 @@ import type {
 } from "../../types";
 
 export async function searchUsers(payload: PageRequest<UserSearchCondition>) {
-  const response = await apiClient.post<
+  const response = await apiClient.get<
     ApiResponse<PageResponse<UserListResponse>>
-  >("/user/search", payload);
+  >("/user/search", {
+    params: {
+      page: payload.page,
+      size: payload.size,
+      "condition.userId": payload.condition?.userId,
+    },
+  });
 
   return response.data;
 }
 
-export async function infoUser(payload: { userId: string }) {
-  const response = await apiClient.post<ApiResponse<User>>(
-    "/user/info",
-    payload,
+export async function infoUser(userId: string) {
+  const response = await apiClient.get<ApiResponse<User>>(
+    `/user/info/${userId}`,
   );
 
   return response.data;
@@ -37,7 +42,7 @@ export async function createUser(payload: UserCreateCondition) {
 }
 
 export async function updateUser(payload: UserUpdateCondition) {
-  const response = await apiClient.post<ApiResponse<string>>(
+  const response = await apiClient.put<ApiResponse<string>>(
     "/user/update",
     payload,
   );
@@ -45,10 +50,9 @@ export async function updateUser(payload: UserUpdateCondition) {
   return response.data;
 }
 
-export async function deleteUser(payload: { userId: string }) {
-  const response = await apiClient.post<ApiResponse<string>>(
-    "/user/delete",
-    payload,
+export async function deleteUser(userId: string) {
+  const response = await apiClient.delete<ApiResponse<string>>(
+    `/user/delete/${userId}`,
   );
 
   return response.data;

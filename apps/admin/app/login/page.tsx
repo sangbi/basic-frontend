@@ -3,7 +3,6 @@
 import { Box, TextField, Typography } from "@mui/material";
 import { handleApiError, login } from "@repo/api";
 import { tokenStorage } from "@repo/auth";
-import { LoginRequest } from "@repo/types";
 import { AppButton } from "@repo/ui";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -24,7 +23,7 @@ export default function LoginPage() {
 
       tokenStorage.setAccessToken(result.data.accessToken);
 
-      router.push("/dashboard");
+      router.push("/dashboard/users");
     } catch (error) {
       console.error(error);
       alert("로그인에 실패했습니다.");

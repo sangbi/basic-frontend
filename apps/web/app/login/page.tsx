@@ -3,7 +3,6 @@
 import { Box, TextField, Typography } from "@mui/material";
 import { handleApiError, login } from "@repo/api";
 import { tokenStorage } from "@repo/auth";
-import { LoginRequest } from "@repo/types";
 import { AppButton } from "@repo/ui";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

@@ -18,6 +18,7 @@ export default function LoginHistoriesPage() {
         const result = await getLoginHistories();
         setRows(result.data);
       } catch (error) {
+        console.log(error);
         showError("로그인 이력 조회에 실패했습니다.");
       } finally {
         setLoading(false);
