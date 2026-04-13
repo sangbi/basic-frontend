@@ -20,10 +20,17 @@ import {
   PageHeader,
   useFeedback,
 } from "@repo/ui";
+import { usePermission } from "@/features/permission/usePermission";
 
 type Yn = "Y" | "N";
 
 export default function MenuRolesPage() {
+  const {
+    canCreate: canC,
+    canUpdate: canU,
+    canDelete: canD,
+    loading: permissionLoading,
+  } = usePermission("/dashboard/menu-role");
   const [rows, setRows] = useState<MenuRoleResponse[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -99,7 +106,9 @@ export default function MenuRolesPage() {
       key: "action",
       header: "액션",
       render: (row) => (
-        <AppButton onClick={() => openDialog(row)}>수정</AppButton>
+        <Box display="flex" gap={1}>
+          {!canU && <AppButton onClick={() => openDialog(row)}>수정</AppButton>}
+        </Box>
       ),
     },
   ];

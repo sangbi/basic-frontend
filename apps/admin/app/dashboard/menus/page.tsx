@@ -18,8 +18,15 @@ import {
 } from "@repo/api";
 import type { MenuResponse } from "@repo/types";
 import { MenuFormDialog } from "@/components/Menu/MenuFormDialog";
+import { usePermission } from "@/features/permission/usePermission";
 
 export default function MenusPage() {
+  const {
+    canCreate,
+    canUpdate,
+    canDelete,
+    loading: permissionLoading,
+  } = usePermission("/dashboard/menus");
   const [rows, setRows] = useState<MenuResponse[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -37,6 +44,8 @@ export default function MenusPage() {
   const [status, setStatus] = useState("ACTIVE");
 
   const { showError, showSuccess, showLoading, hideLoading } = useFeedback();
+
+  const menuMap = new Map(rows.map((row) => [row.id, row]));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -148,13 +157,23 @@ export default function MenusPage() {
 
   const columns: DataTableColumn<MenuResponse>[] = [
     { key: "id", header: "ID", render: (row) => row.id },
-    { key: "menuName", header: "메뉴명", render: (row) => row.menuNm },
+    {
+      key: "menuName",
+      header: "메뉴명",
+      render: (row) => {
+        const isChild = row.parentId != null;
+        return `${isChild ? "└ " : ""}${row.menuNm}`;
+      },
+    },
     { key: "menuPath", header: "경로", render: (row) => row.menuPath ?? "-" },
     { key: "apiPath", header: "API경로", render: (row) => row.apiPath ?? "-" },
     {
       key: "parentId",
-      header: "상위 메뉴 ID",
-      render: (row) => row.parentId ?? "-",
+      header: "상위 메뉴",
+      render: (row) =>
+        row.parentId != null
+          ? (menuMap.get(row.parentId)?.menuNm ?? row.parentId)
+          : "-",
     },
     { key: "sortOrder", header: "정렬", render: (row) => row.sortOrder },
     { key: "visibleYn", header: "노출", render: (row) => row.visibleYn },
@@ -164,18 +183,28 @@ export default function MenusPage() {
       header: "액션",
       render: (row) => (
         <Box display="flex" gap={1}>
-          <AppButton onClick={() => openEditDialog(row.id)}>수정</AppButton>
+          {canUpdate && (
+            <AppButton onClick={() => openEditDialog(row.id)}>수정</AppButton>
+          )}
         </Box>
       ),
     },
   ];
+  const parentOptions = rows
+    .filter((row) => row.parentId == null)
+    .map((row) => ({
+      label: row.menuNm,
+      value: String(row.id),
+    }));
 
   return (
     <>
       <PageHeader
         title="메뉴 관리"
         description={`전체 ${rows.length}건`}
-        actions={<AppButton onClick={openCreateDialog}>등록</AppButton>}
+        actions={
+          canCreate && <AppButton onClick={openCreateDialog}>등록</AppButton>
+        }
       />
 
       <DataTable
@@ -196,6 +225,7 @@ export default function MenusPage() {
         icon={icon}
         visibleYn={visibleYn}
         status={status}
+        parentOptions={parentOptions}
         onChangeMenuNm={setMenuNm}
         onChangeMenuPath={setMenuPath}
         onChangeApiPath={setApiPath}

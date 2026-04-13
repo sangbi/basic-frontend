@@ -21,6 +21,9 @@ export interface UserListResponse {
   roleId: number;
   roleCode: string;
   status: string;
+  userNm: string;
+  email: string;
+  lastLoginAt: Date;
 }
 
 export interface UserCreateCondition {
@@ -34,4 +37,5 @@ export interface UserCreateCondition {
 export interface UserUpdateCondition {
   roleId: number;
   userId: string;
+  userNm: string;
 }

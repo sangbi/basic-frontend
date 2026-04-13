@@ -1,22 +1,29 @@
 "use client";
-"use client";
 
 import { useEffect, useState } from "react";
-import { Box, List, ListItemButton, ListItemText, Paper } from "@mui/material";
+import {
+  Collapse,
+  List,
+  ListItemButton,
+  ListItemText,
+  Paper,
+  Box,
+} from "@mui/material";
+import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import { usePathname, useRouter } from "next/navigation";
-import { getAdminMenus } from "@repo/api";
-import type { AdminMenuResponse } from "@repo/types";
+import type { AdminMyMenuTreeResponse } from "@repo/types";
+import { getMyAdminMenus } from "@repo/api";
 
 export function AdminSidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const [menus, setMenus] = useState<AdminMenuResponse[]>([]);
-  const HEADER_HEIGHT = 64;
+  const [menus, setMenus] = useState<AdminMyMenuTreeResponse[]>([]);
+  const [openMap, setOpenMap] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const load = async () => {
       try {
-        const result = await getAdminMenus();
+        const result = await getMyAdminMenus();
         setMenus(result.data);
       } catch (error) {
         console.error(error);
@@ -26,13 +33,55 @@ export function AdminSidebar() {
     load();
   }, []);
 
+  const toggleOpen = (id: number) => {
+    setOpenMap((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const renderMenu = (menu: AdminMyMenuTreeResponse, depth = 0) => {
+    const hasChildren = menu.children && menu.children.length > 0;
+    const open = openMap[menu.id] ?? false;
+
+    return (
+      <Box key={menu.id}>
+        <ListItemButton
+          selected={!!menu.menuPath && pathname === menu.menuPath}
+          onClick={() => {
+            if (hasChildren) {
+              toggleOpen(menu.id);
+              return;
+            }
+
+            if (menu.menuPath) {
+              router.push(menu.menuPath);
+            }
+          }}
+          sx={{ pl: 2 + depth * 2 }}
+        >
+          <ListItemText primary={menu.menuNm} />
+          {hasChildren ? open ? <ExpandLess /> : <ExpandMore /> : null}
+        </ListItemButton>
+
+        {hasChildren ? (
+          <Collapse in={open} timeout="auto" unmountOnExit>
+            <List disablePadding>
+              {menu.children.map((child) => renderMenu(child, depth + 1))}
+            </List>
+          </Collapse>
+        ) : null}
+      </Box>
+    );
+  };
+
   return (
     <Paper
       elevation={0}
       square
       sx={{
-        width: 240,
-        height: "calc(100vh - " + `${HEADER_HEIGHT}` + "px)",
+        width: 260,
+        height: "calc(100vh - 64px)",
         borderRadius: 0,
         borderRight: "1px solid",
         borderColor: "divider",
@@ -40,21 +89,7 @@ export function AdminSidebar() {
       }}
     >
       <Box py={2}>
-        <List>
-          {menus.map((menu) => (
-            <ListItemButton
-              key={menu.id}
-              selected={pathname === menu.menuPath}
-              onClick={() => {
-                if (menu.menuPath) {
-                  router.push(menu.menuPath);
-                }
-              }}
-            >
-              <ListItemText primary={menu.menuNm} />
-            </ListItemButton>
-          ))}
-        </List>
+        <List>{menus.map((menu) => renderMenu(menu))}</List>
       </Box>
     </Paper>
   );

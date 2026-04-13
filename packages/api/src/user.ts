@@ -11,13 +11,11 @@ import type {
 } from "../../types";
 
 export async function searchUsers(payload: PageRequest<UserSearchCondition>) {
-  const response = await apiClient.get<
-    ApiResponse<PageResponse<UserListResponse>>
-  >("/user/search", {
+  const response = await apiClient.get("/user/search", {
     params: {
       page: payload.page,
       size: payload.size,
-      "condition.userId": payload.condition?.userId,
+      userId: payload.condition?.userId || undefined,
     },
   });
 

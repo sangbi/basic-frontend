@@ -1,6 +1,7 @@
 "use client";
 
 import { UserFormDialog } from "@/components/User/UserFormDialog";
+import { usePermission } from "@/features/permission/usePermission";
 import { queryKeys } from "@/src/lib/queryKeys";
 import { Box, Pagination, TextField, Typography } from "@mui/material";
 import {
@@ -31,6 +32,12 @@ import { useState } from "react";
 export default function UsersPage() {
   const { showError, showInfo, showSuccess, showLoading, hideLoading } =
     useFeedback();
+  const {
+    canCreate,
+    canUpdate,
+    canDelete,
+    loading: permissionLoading,
+  } = usePermission("/dashboard/users");
 
   const [userId, setUserId] = useState<string>("");
   const [page, setPage] = useState(1);
@@ -41,6 +48,7 @@ export default function UsersPage() {
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formUserId, setFormUserId] = useState("");
+  const [formUserNm, setFormUserNm] = useState("");
   const [formPassword, setFormPassword] = useState("");
   const [formRoleId, setFormRoleId] = useState(3);
   const [searchParam, setSearchParam] = useState<
@@ -68,6 +76,7 @@ export default function UsersPage() {
   const resetForm = () => {
     setEditingId(null);
     setFormUserId("");
+    setFormUserNm("");
     setFormPassword("");
     setFormRoleId(3);
   };
@@ -87,6 +96,7 @@ export default function UsersPage() {
       setFormMode("edit");
       setEditingId(user.userId);
       setFormUserId(user.userId);
+      setFormUserNm(user.userNm);
       setFormRoleId(user.roleId);
       setFormOpen(true);
     } catch (error) {
@@ -131,7 +141,7 @@ export default function UsersPage() {
           userId: formUserId,
           password: formPassword,
           roleId: formRoleId,
-          userNm: "",
+          userNm: formUserNm,
           email: "",
         })
         .finally(() => {
@@ -146,10 +156,12 @@ export default function UsersPage() {
         .mutateAsync({
           userId: editingId,
           roleId: formRoleId,
+          userNm: formUserNm,
         })
         .finally(() => {
           hideLoading();
           resetForm();
+          rerfesh();
         });
     }
   };
@@ -184,6 +196,7 @@ export default function UsersPage() {
       },
     }));
     showInfo("검색 조건이 적용되었습니다.");
+    rerfesh();
   };
 
   const handleRefresh = async () => {
@@ -212,6 +225,11 @@ export default function UsersPage() {
       render: (row) => row.userId,
     },
     {
+      key: "userNm",
+      header: "이름",
+      render: (row) => row.userNm,
+    },
+    {
       key: "role",
       header: "권한",
       render: (row) => row.roleCode,
@@ -221,13 +239,17 @@ export default function UsersPage() {
       header: "액션",
       render: (row) => (
         <Box display="flex" gap={1}>
-          <AppButton onClick={() => handleEdit(row.userId)}>수정</AppButton>
-          <AppButton
-            color="error"
-            onClick={() => setDeleteTargetId(row.userId)}
-          >
-            삭제
-          </AppButton>
+          {canUpdate && (
+            <AppButton onClick={() => handleEdit(row.userId)}>수정</AppButton>
+          )}
+          {canDelete && (
+            <AppButton
+              color="error"
+              onClick={() => setDeleteTargetId(row.userId)}
+            >
+              삭제
+            </AppButton>
+          )}
         </Box>
       ),
     },
@@ -238,7 +260,9 @@ export default function UsersPage() {
       <PageHeader
         title="사용자 관리"
         description={`전체 ${totalCount}건`}
-        actions={<AppButton onClick={openCreateDialog}>등록</AppButton>}
+        actions={
+          canCreate && <AppButton onClick={openCreateDialog}>등록</AppButton>
+        }
       />
 
       <SearchPanel
@@ -299,9 +323,11 @@ export default function UsersPage() {
         open={formOpen}
         mode={formMode}
         userId={formUserId}
+        userNm={formUserNm}
         password={formPassword}
         roleId={formRoleId}
         onChangeUserId={setFormUserId}
+        onChangeUserNm={setFormUserNm}
         onChangePassword={setFormPassword}
         onChangeRoleId={setFormRoleId}
         onSubmit={handleSubmitForm}

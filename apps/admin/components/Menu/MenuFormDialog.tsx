@@ -9,6 +9,11 @@ import {
 } from "@mui/material";
 import { FormSection, FormSelectField, FormTextField } from "@repo/ui";
 
+type SelectOption = {
+  label: string;
+  value: string;
+};
+
 type Props = {
   open: boolean;
   mode: "create" | "edit";
@@ -20,6 +25,7 @@ type Props = {
   icon: string;
   visibleYn: string;
   status: string;
+  parentOptions: SelectOption[];
   loading?: boolean;
   onChangeMenuNm: (value: string) => void;
   onChangeMenuPath: (value: string) => void;
@@ -44,6 +50,7 @@ export function MenuFormDialog({
   icon,
   visibleYn,
   status,
+  parentOptions,
   loading = false,
   onChangeMenuNm,
   onChangeMenuPath,
@@ -80,11 +87,11 @@ export function MenuFormDialog({
             onChange={(e) => onChangeApiPath(e.target.value)}
           />
 
-          <FormTextField
-            label="상위 메뉴 ID"
+          <FormSelectField
+            label="상위 메뉴"
             value={parentId}
             onChange={(e) => onChangeParentId(e.target.value)}
-            helperText="없으면 비워두세요."
+            options={[{ label: "없음", value: "" }, ...parentOptions]}
           />
 
           <FormTextField

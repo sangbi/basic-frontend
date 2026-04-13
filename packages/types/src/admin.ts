@@ -82,6 +82,7 @@ export interface UpdateMenuRoleRequest {
   canDelete: string;
 }
 
+// 없앨 예정
 export interface AdminMenuResponse {
   id: number;
   menuNm: string;
@@ -89,6 +90,15 @@ export interface AdminMenuResponse {
   parentId: string;
   sortOrder: string;
   icon: string;
+}
+export interface AdminMyMenuTreeResponse {
+  id: number;
+  menuNm: string;
+  menuPath: string | null;
+  icon: string | null;
+  parentId: number | null;
+  sortOrder: number;
+  children: AdminMyMenuTreeResponse[];
 }
 
 export interface CreateRoleRequest {
@@ -124,4 +134,13 @@ export interface UpdateMenuRequest {
   icon: string;
   visibleYn: string;
   status: string;
+}
+
+export interface MyMenuPermissionResponse {
+  menuPath: string | null;
+  apiPath: string | null;
+  canRead: string;
+  canCreate: string;
+  canUpdate: string;
+  canDelete: string;
 }

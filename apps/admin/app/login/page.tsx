@@ -23,7 +23,7 @@ export default function LoginPage() {
 
       tokenStorage.setAccessToken(result.data.accessToken);
 
-      router.push("/dashboard/users");
+      router.push("/dashboard");
     } catch (error) {
       console.error(error);
       alert("로그인에 실패했습니다.");

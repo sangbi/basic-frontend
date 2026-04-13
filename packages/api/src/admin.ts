@@ -14,6 +14,8 @@ import {
   UpdateRoleRequest,
   CreateMenuRequest,
   UpdateMenuRequest,
+  MyMenuPermissionResponse,
+  AdminMyMenuTreeResponse,
 } from "../../types";
 
 export async function getLoginHistories() {
@@ -73,9 +75,11 @@ export async function updateMenuRole(
   return response.data;
 }
 
-export async function getAdminMenus() {
+export async function getMyAdminMenus() {
   const response =
-    await apiClient.get<ApiResponse<AdminMenuResponse[]>>("/admin/menus/me");
+    await apiClient.get<ApiResponse<AdminMyMenuTreeResponse[]>>(
+      "/admin/menus/me",
+    );
   return response.data;
 }
 
@@ -122,5 +126,13 @@ export async function updateMenu(id: number, payload: UpdateMenuRequest) {
     `/admin/menus/${id}`,
     payload,
   );
+  return response.data;
+}
+
+export async function getMyMenuPermissions() {
+  const response =
+    await apiClient.get<ApiResponse<MyMenuPermissionResponse[]>>(
+      `/admin/menu-roles/me`,
+    );
   return response.data;
 }

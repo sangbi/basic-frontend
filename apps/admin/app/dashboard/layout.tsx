@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { AdminShell } from "@/components/layout/AdminShell";
 import { useAdminAuthGuard } from "@/features/auth/useAdminAuthGuard";
+import { PermissionProvider } from "@/features/permission/PermissionProvider";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { loading, me, authorized } = useAdminAuthGuard({
@@ -19,8 +20,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AdminShell userId={me?.userId} role={me?.role}>
-      {children}
-    </AdminShell>
+    <PermissionProvider>
+      <AdminShell userId={me?.userId} role={me?.role}>
+        {children}
+      </AdminShell>
+    </PermissionProvider>
   );
 }

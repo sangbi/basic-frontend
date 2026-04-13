@@ -18,8 +18,15 @@ import {
 } from "@repo/api";
 import type { RoleResponse } from "@repo/types";
 import { RoleFormDialog } from "@/components/Role/RoleFormDialog";
+import { usePermission } from "@/features/permission/usePermission";
 
 export default function RolesPage() {
+  const {
+    canCreate,
+    canUpdate,
+    canDelete,
+    loading: permissionLoading,
+  } = usePermission("/dashboard/roles");
   const [rows, setRows] = useState<RoleResponse[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -153,7 +160,9 @@ export default function RolesPage() {
       header: "액션",
       render: (row) => (
         <Box display="flex" gap={1}>
-          <AppButton onClick={() => openEditDialog(row.id)}>수정</AppButton>
+          {canUpdate && (
+            <AppButton onClick={() => openEditDialog(row.id)}>수정</AppButton>
+          )}
         </Box>
       ),
     },
@@ -164,7 +173,11 @@ export default function RolesPage() {
       <PageHeader
         title="역할 관리"
         description={`전체 ${rows.length}건`}
-        actions={<AppButton onClick={openCreateDialog}>등록</AppButton>}
+        actions={
+          canCreate ? (
+            <AppButton onClick={openCreateDialog}>등록</AppButton>
+          ) : null
+        }
       />
 
       <DataTable

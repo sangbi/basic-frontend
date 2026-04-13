@@ -5,9 +5,11 @@ import { FormSection, FormSelectField, FormTextField } from "@repo/ui";
 type Props = {
   mode: "create" | "edit";
   userId: string;
+  userNm: string;
   password: string;
   roleId: number;
   onChangeUserId: (value: string) => void;
+  onChangeUserNm: (value: string) => void;
   onChangePassword: (value: string) => void;
   onChangeRoleId: (value: number) => void;
 };
@@ -15,9 +17,11 @@ type Props = {
 export function UserForm({
   mode,
   userId,
+  userNm,
   password,
   roleId,
   onChangeUserId,
+  onChangeUserNm,
   onChangePassword,
   onChangeRoleId,
 }: Props) {
@@ -38,6 +42,12 @@ export function UserForm({
           onChange={(e) => onChangePassword(e.target.value)}
         />
       ) : null}
+
+      <FormTextField
+        label="이름"
+        value={userNm}
+        onChange={(e) => onChangeUserNm(e.target.value)}
+      />
 
       <FormSelectField
         label="권한"
