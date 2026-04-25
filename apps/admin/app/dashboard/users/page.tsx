@@ -291,16 +291,7 @@ export default function UsersPage() {
         totalCnt={totalCount}
       />
 
-      <Box
-        mt={3}
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-      >
-        <Typography variant="body2" color="text.secondary">
-          총 {totalCount}건
-        </Typography>
-
+      <Box mt={3} display="flex" justifyContent="center" alignItems="center">
         <Pagination
           page={page}
           count={Math.max(totalPages, 1)}

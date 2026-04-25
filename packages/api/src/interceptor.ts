@@ -19,6 +19,7 @@ export function setupInterceptors() {
     const accessToken = tokenStorage.getAccessToken();
 
     if (accessToken) {
+      config.headers = config.headers ?? {};
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
 

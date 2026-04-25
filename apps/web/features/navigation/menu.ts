@@ -17,4 +17,14 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/dashboard/users",
     roles: ["ADMIN"],
   },
+  {
+    label: "공지사항",
+    path: "/dashboard/notices",
+    roles: ["USER", "ADMIN"],
+  },
+  {
+    label: "자료실",
+    path: "/dashboard/resources",
+    roles: ["USER", "ADMIN"],
+  },
 ];
