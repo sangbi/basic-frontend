@@ -1,205 +1,133 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Box } from "@mui/material";
+import { queryKeys } from "@/src/lib/queryKeys";
 import {
-  AppButton,
-  DataTable,
-  type DataTableColumn,
-  PageHeader,
-  UploadedAttachment,
-  useFeedback,
-} from "@repo/ui";
-import {
-  createNotice,
-  getNotice,
-  getNotices,
-  handleApiError,
-  linkAttachment,
-  updateNotice,
-  uploadAttachment,
-} from "@repo/api";
-import type { NoticeResponse } from "@repo/types";
-import { useRouter } from "next/navigation";
+  Box,
+  Pagination,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { searchWebNotices } from "@repo/api";
+import type { NoticeSearchCondition, PageRequest } from "@repo/types";
+import { AppButton, PageHeader, useFeedback } from "@repo/ui";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
+import { useState } from "react";
 
-export default function NoticesPage() {
-  const router = useRouter();
-  const [rows, setRows] = useState<NoticeResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const [formOpen, setFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState<"create" | "edit">("create");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [noticeType, setNoticeType] = useState("GENERAL");
-  const [status, setStatus] = useState("ACTIVE");
-  const [pinnedYn, setPinnedYn] = useState("N");
-  const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
-
-  const { showError, showSuccess, showLoading, hideLoading } = useFeedback();
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const result = await getNotices();
-      setRows(result.data);
-    } catch (error) {
-      handleApiError(error, {
-        showError,
-        fallbackMessage: "공지사항 목록 조회에 실패했습니다.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const resetForm = () => {
-    setSelectedId(null);
-    setTitle("");
-    setContent("");
-    setNoticeType("GENERAL");
-    setStatus("ACTIVE");
-    setPinnedYn("N");
-    setAttachments([]);
-  };
-
-  const openCreateDialog = () => {
-    resetForm();
-    setFormMode("create");
-    setFormOpen(true);
-  };
-
-  const openEditDialog = async (id: number) => {
-    showLoading();
-    try {
-      const result = await getNotice(id);
-      const notice = result.data;
-
-      setSelectedId(notice.id);
-      setTitle(notice.title);
-      setContent(notice.content);
-      setNoticeType(notice.noticeType);
-      setStatus(notice.status);
-      setPinnedYn(notice.pinnedYn);
-
-      setFormMode("edit");
-      setFormOpen(true);
-    } catch (error) {
-      handleApiError(error, {
-        showError,
-        fallbackMessage: "공지사항 상세 조회에 실패했습니다.",
-      });
-    } finally {
-      hideLoading();
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!title.trim()) {
-      showError("제목을 입력해주세요.");
-      return;
-    }
-
-    if (!content.trim()) {
-      showError("내용을 입력해주세요.");
-      return;
-    }
-
-    showLoading();
-    try {
-      const payload = {
-        title,
-        content,
-        noticeType,
-        status,
-        pinnedYn,
-      };
-
-      if (formMode === "create") {
-        const result = await createNotice(payload);
-        const noticeId = result.data;
-
-        for (let i = 0; i < attachments.length; i += 1) {
-          await linkAttachment({
-            attachmentId: attachments[i].id,
-            targetType: "NOTICE",
-            targetId: noticeId,
-            sortOrder: i,
-          });
-        }
-
-        showSuccess("공지사항이 등록되었습니다.");
-      } else if (selectedId != null) {
-        await updateNotice(selectedId, payload);
-        showSuccess("공지사항이 수정되었습니다.");
-      }
-
-      setFormOpen(false);
-      resetForm();
-      await load();
-    } catch (error) {
-      handleApiError(error, {
-        showError,
-        fallbackMessage:
-          formMode === "create"
-            ? "공지사항 등록에 실패했습니다."
-            : "공지사항 수정에 실패했습니다.",
-      });
-    } finally {
-      hideLoading();
-    }
-  };
-
-  // 파일업로드 핸들러
-  const handleUploadAttachment = async (file: File) => {
-    const result = await uploadAttachment(file);
-    setAttachments((prev) => [...prev, result.data]);
-  };
-
-  // 파일제거 핸들러
-  const handleRemoveAttachment = (fileId: number) => {
-    setAttachments((prev) => prev.filter((file) => file.id !== fileId));
-  };
-
-  const columns: DataTableColumn<NoticeResponse>[] = [
-    { key: "id", header: "ID", render: (row) => row.id },
-    { key: "title", header: "제목", render: (row) => row.title },
-    { key: "noticeType", header: "유형", render: (row) => row.noticeType },
-    { key: "status", header: "상태", render: (row) => row.status },
-    { key: "pinnedYn", header: "상단 고정", render: (row) => row.pinnedYn },
-    { key: "viewCnt", header: "조회수", render: (row) => row.viewCnt },
-    { key: "createdAt", header: "등록일시", render: (row) => row.createdAt },
-    {
-      key: "action",
-      header: "액션",
-      render: (row) => (
-        <Box display="flex" gap={1}>
-          <AppButton
-            onClick={() => router.push(`/dashboard/notices/${row.id}`)}
-          >
-            상세
-          </AppButton>
-        </Box>
-      ),
+export default function WebNoticesPage() {
+  const { showInfo } = useFeedback();
+  const [page, setPage] = useState(1);
+  const [searchTitle, setSearchTitle] = useState("");
+  const [searchParam, setSearchParam] = useState<
+    PageRequest<NoticeSearchCondition>
+  >({
+    page,
+    size: 10,
+    condition: {
+      title: searchTitle,
     },
-  ];
+  });
+
+  const queryClient = useQueryClient();
+  const search = useQuery({
+    queryKey: queryKeys.notices(searchParam),
+    queryFn: () => searchWebNotices(searchParam),
+  });
+  const rows = search.data?.data.items ?? [];
+  const totalPages = search.data?.data.totalPages ?? 0;
+  const totalCount = search.data?.data.totalCount ?? 0;
+  const rerfesh = () => {
+    queryClient.invalidateQueries({ queryKey: ["notices"] });
+  };
+
+  const handleSearch = async () => {
+    setPage(1);
+    setSearchParam((prev) => ({
+      ...prev,
+      condition: {
+        ...prev.condition,
+        title: searchTitle,
+      },
+    }));
+    showInfo("검색 조건이 적용되었습니다.");
+    rerfesh();
+  };
+
+  const handleRefresh = async () => {
+    setPage(1);
+    setSearchTitle("");
+    setSearchParam({
+      page: 1,
+      size: 10,
+      condition: {
+        title: "",
+      },
+    });
+    showInfo("검색이 완료되었습니다.");
+  };
 
   return (
-    <>
-      <PageHeader title="공지사항 관리" description={`전체 ${rows.length}건`} />
-
-      <DataTable
-        rows={rows}
-        columns={columns}
-        loading={loading}
-        emptyMessage="공지사항 데이터가 없습니다."
+    <Box maxWidth={960} mx="auto" py={4}>
+      <PageHeader
+        title="공지사항"
+        description={`전체 ${totalCount}건`}
+        actions={
+          <Stack display="flex" direction="row" spacing={1}>
+            <TextField
+              label="제목"
+              value={searchTitle}
+              size="small"
+              onChange={(e) => setSearchTitle(e.target.value)}
+              fullWidth
+            />
+            <AppButton
+              sx={{ whiteSpace: "nowrap" }}
+              size="small"
+              onClick={handleRefresh}
+            >
+              초기화
+            </AppButton>
+            <AppButton
+              sx={{ whiteSpace: "nowrap" }}
+              size="small"
+              onClick={handleSearch}
+            >
+              검색
+            </AppButton>
+          </Stack>
+        }
       />
-    </>
+
+      <Stack spacing={1.5}>
+        {rows.map((notice) => (
+          <Paper key={notice.id} variant="outlined" sx={{ p: 2 }}>
+            <Link
+              href={`/dashboard/notices/${notice.id}`}
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <Typography variant="h6" fontWeight={600}>
+                {notice.pinnedYn === "Y" ? "[고정] " : ""}
+                {notice.title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {notice.noticeType} · 조회수 {notice.viewCnt} ·{" "}
+                {notice.createdAt}
+              </Typography>
+            </Link>
+          </Paper>
+        ))}
+      </Stack>
+
+      <Box display="flex" justifyContent="center" mt={3}>
+        <Pagination
+          page={page}
+          count={Math.max(totalPages, 1)}
+          onChange={(_, value) => setPage(value)}
+          color="primary"
+        />
+      </Box>
+    </Box>
   );
 }

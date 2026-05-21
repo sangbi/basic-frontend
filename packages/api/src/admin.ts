@@ -1,22 +1,22 @@
-import { apiClient } from "./client";
 import {
-  type ApiResponse,
-  type LoginHistoryResponse,
-  type UserSessionResponse,
   type ActivityLogResponse,
   AdminDashboardSummaryResponse,
-  RoleResponse,
+  AdminMyMenuTreeResponse,
+  type ApiResponse,
+  CreateMenuRequest,
+  CreateRoleRequest,
+  type LoginHistoryResponse,
   MenuResponse,
   MenuRoleResponse,
-  UpdateMenuRoleRequest,
-  AdminMenuResponse,
-  CreateRoleRequest,
-  UpdateRoleRequest,
-  CreateMenuRequest,
-  UpdateMenuRequest,
+  MenuSetResponse,
   MyMenuPermissionResponse,
-  AdminMyMenuTreeResponse,
+  RoleResponse,
+  UpdateMenuRequest,
+  UpdateMenuRoleRequest,
+  UpdateRoleRequest,
+  type UserSessionResponse,
 } from "../../types";
+import { apiClient } from "./client";
 
 export async function getLoginHistories() {
   const response = await apiClient.get<ApiResponse<LoginHistoryResponse[]>>(
@@ -52,9 +52,17 @@ export async function getRoles() {
   return response.data;
 }
 
-export async function getMenus() {
+export async function getMenuSets() {
   const response =
-    await apiClient.get<ApiResponse<MenuResponse[]>>("/admin/menus");
+    await apiClient.get<ApiResponse<MenuSetResponse[]>>("/admin/menu-sets");
+  return response.data;
+}
+
+export async function getMenus(menuSetCd?: string) {
+  const response = await apiClient.get<ApiResponse<MenuResponse[]>>(
+    "/admin/menus",
+    { params: { menuSetCd } },
+  );
   return response.data;
 }
 

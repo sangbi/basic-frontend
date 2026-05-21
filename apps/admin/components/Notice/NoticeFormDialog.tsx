@@ -30,6 +30,7 @@ type Props = {
   loading?: boolean;
   uploadingFiles?: UploadingFile[];
   uploadErrors?: UploadErrorItem[];
+  noticeTypeOptions: { label: string; value: string }[];
   onChangeTitle: (value: string) => void;
   onChangeContent: (value: string) => void;
   onChangeNoticeType: (value: string) => void;
@@ -54,6 +55,7 @@ export function NoticeFormDialog({
   loading = false,
   uploadingFiles = [],
   uploadErrors = [],
+  noticeTypeOptions = [],
   onChangeTitle,
   onChangeContent,
   onChangeNoticeType,
@@ -99,11 +101,7 @@ export function NoticeFormDialog({
             label="공지 유형"
             value={noticeType}
             onChange={(e) => onChangeNoticeType(e.target.value)}
-            options={[
-              { label: "GENERAL", value: "GENERAL" },
-              { label: "IMPORTANT", value: "IMPORTANT" },
-              { label: "MAINTENANCE", value: "MAINTENANCE" },
-            ]}
+            options={noticeTypeOptions}
           />
 
           <FormSelectField

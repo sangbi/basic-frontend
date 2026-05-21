@@ -3,6 +3,7 @@
 import { Box, List, ListItemButton, ListItemText, Paper } from "@mui/material";
 import { usePathname, useRouter } from "next/navigation";
 import { MENU_ITEMS } from "@/features/navigation/menu";
+import { UserRole } from "@repo/auth";
 
 type Props = {
   role?: string;
@@ -17,7 +18,7 @@ export function AppSidebar({ role }: Props) {
   const menus = MENU_ITEMS.filter((item) => {
     if (!item.roles || item.roles.length === 0) return true;
     if (!role) return false;
-    return item.roles.includes(role);
+    return item.roles.includes(role as UserRole);
   });
 
   return (

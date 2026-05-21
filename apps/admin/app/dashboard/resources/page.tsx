@@ -1,19 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Box } from "@mui/material";
-import {
-  AppButton,
-  DataTable,
-  type DataTableColumn,
-  PageHeader,
-  resolveUploadErrorMessage,
-  UploadedAttachment,
-  UploadErrorItem,
-  UploadingFile,
-  useFeedback,
-  validateUploadFile,
-} from "@repo/ui";
+import { ResourceFormDialog } from "@/components/Resource/ResourceFormDialog";
+import { usePermission } from "@/features/permission/usePermission";
+import { queryKeys } from "@/src/lib/queryKeys";
+import { Box, Pagination, TextField } from "@mui/material";
 import {
   createResource,
   deleteAttachmentFromTarget,
@@ -22,19 +12,36 @@ import {
   getResources,
   handleApiError,
   linkAttachment,
-  unlinkAttachment,
   updateResource,
   uploadAttachment,
 } from "@repo/api";
-import type { AttachmentResponse, ResourceResponse } from "@repo/types";
-import { ResourceFormDialog } from "@/components/Resource/ResourceFormDialog";
-import { usePermission } from "@/features/permission/usePermission";
+import type {
+  AttachmentResponse,
+  PageRequest,
+  ResourceResponse,
+  ResourceSearchCondition,
+} from "@repo/types";
+import {
+  AppButton,
+  DataTable,
+  type DataTableColumn,
+  PageHeader,
+  resolveUploadErrorMessage,
+  SearchPanel,
+  UploadErrorItem,
+  UploadingFile,
+  useFeedback,
+  validateUploadFile,
+} from "@repo/ui";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function ResourcesPage() {
   const router = useRouter();
-  const [rows, setRows] = useState<ResourceResponse[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [searchTitle, setSearchTitle] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
@@ -50,26 +57,30 @@ export default function ResourcesPage() {
   const [uploadErrors, setUploadErrors] = useState<UploadErrorItem[]>([]);
 
   const { canCreate, canUpdate } = usePermission("/dashboard/resources");
-  const { showError, showSuccess, showLoading, hideLoading } = useFeedback();
+  const { showError, showSuccess, showLoading, hideLoading, showInfo } =
+    useFeedback();
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const result = await getResources();
-      setRows(result.data);
-    } catch (error) {
-      handleApiError(error, {
-        showError,
-        fallbackMessage: "자료실 목록 조회에 실패했습니다.",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const [searchParam, setSearchParam] = useState<
+    PageRequest<ResourceSearchCondition>
+  >({
+    page,
+    size: 10,
+    condition: {
+      title: searchTitle,
+    },
+  });
+  const queryClient = useQueryClient();
+  const search = useQuery({
+    queryKey: queryKeys.resource(searchParam),
+    queryFn: () => getResources(searchParam),
+  });
+
+  const rows = search.data?.data.items ?? [];
+  const totalPages = search.data?.data.totalPages ?? 0;
+  const totalCount = search.data?.data.totalCount ?? 0;
+  const rerfesh = () => {
+    queryClient.invalidateQueries({ queryKey: ["notices"] });
   };
-
-  useEffect(() => {
-    load();
-  }, []);
 
   const resetForm = () => {
     setSelectedId(null);
@@ -166,7 +177,7 @@ export default function ResourcesPage() {
 
       setFormOpen(false);
       resetForm();
-      await load();
+      rerfesh();
     } catch (error) {
       handleApiError(error, {
         showError,
@@ -275,7 +286,7 @@ export default function ResourcesPage() {
       if (formMode === "edit" && selectedId != null) {
         await deleteAttachmentFromTarget({
           attachmentId: fileId,
-          targetType: "NOTICE",
+          targetType: "RESOURCE",
           targetId: selectedId,
         });
       }
@@ -288,6 +299,32 @@ export default function ResourcesPage() {
         fallbackMessage: "첨부파일 삭제에 실패했습니다.",
       });
     }
+  };
+
+  const handleSearch = async () => {
+    setPage(1);
+    setSearchParam((prev) => ({
+      ...prev,
+      condition: {
+        ...prev.condition,
+        title: searchTitle,
+      },
+    }));
+    showInfo("검색 조건이 적용되었습니다.");
+    rerfesh();
+  };
+
+  const handleRefresh = async () => {
+    setPage(1);
+    setTitle("");
+    setSearchParam({
+      page: 1,
+      size: 10,
+      condition: {
+        title: "",
+      },
+    });
+    showInfo("검색이 완료되었습니다.");
   };
 
   const columns: DataTableColumn<ResourceResponse>[] = [
@@ -319,20 +356,47 @@ export default function ResourcesPage() {
     <>
       <PageHeader
         title="자료실 관리"
-        description={`전체 ${rows.length}건`}
+        description={`전체 ${totalCount}건`}
         actions={
           canCreate ? (
             <AppButton onClick={openCreateDialog}>등록</AppButton>
           ) : null
         }
       />
+      <SearchPanel
+        actions={
+          <>
+            <AppButton onClick={handleRefresh}>초기화</AppButton>
+            <AppButton onClick={handleSearch}>검색</AppButton>
+          </>
+        }
+      >
+        <Box display="flex" gap={2}>
+          <TextField
+            label="제목"
+            value={searchTitle}
+            onChange={(e) => setSearchTitle(e.target.value)}
+            fullWidth
+          />
+        </Box>
+      </SearchPanel>
 
       <DataTable
         rows={rows}
         columns={columns}
         loading={loading}
         emptyMessage="자료실 데이터가 없습니다."
+        totalCnt={totalCount}
       />
+
+      <Box mt={3} display="flex" justifyContent="center" alignItems="center">
+        <Pagination
+          page={page}
+          count={Math.max(totalPages, 1)}
+          onChange={(_, value) => setPage(value)}
+          color="primary"
+        />
+      </Box>
 
       <ResourceFormDialog
         open={formOpen}

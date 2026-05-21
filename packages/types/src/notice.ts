@@ -1,3 +1,7 @@
+export interface NoticeSearchCondition {
+  title?: string;
+}
+
 export interface NoticeResponse {
   id: number;
   title: string;

@@ -1,198 +1,132 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Box } from "@mui/material";
+import { queryKeys } from "@/src/lib/queryKeys";
 import {
-  AppButton,
-  DataTable,
-  type DataTableColumn,
-  PageHeader,
-  UploadedAttachment,
-  useFeedback,
-} from "@repo/ui";
-import {
-  createResource,
-  getResource,
-  getResources,
-  handleApiError,
-  linkAttachment,
-  updateResource,
-  uploadAttachment,
-} from "@repo/api";
-import type { ResourceResponse } from "@repo/types";
-import { useRouter } from "next/navigation";
+  Box,
+  Pagination,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { searchWebResources } from "@repo/api";
+import type { PageRequest, ResourceSearchCondition } from "@repo/types";
+import { AppButton, PageHeader, useFeedback } from "@repo/ui";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
+import { useState } from "react";
 
-export default function ResourcesPage() {
-  const router = useRouter();
-  const [rows, setRows] = useState<ResourceResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const [formOpen, setFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState<"create" | "edit">("create");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [status, setStatus] = useState("ACTIVE");
-  const [pinnedYn, setPinnedYn] = useState("N");
-  const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
-
-  const { showError, showSuccess, showLoading, hideLoading } = useFeedback();
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const result = await getResources();
-      setRows(result.data);
-    } catch (error) {
-      handleApiError(error, {
-        showError,
-        fallbackMessage: "자료실 목록 조회에 실패했습니다.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const resetForm = () => {
-    setSelectedId(null);
-    setTitle("");
-    setContent("");
-    setStatus("ACTIVE");
-    setPinnedYn("N");
-  };
-
-  const openCreateDialog = () => {
-    resetForm();
-    setFormMode("create");
-    setFormOpen(true);
-  };
-
-  const openEditDialog = async (id: number) => {
-    showLoading();
-    try {
-      const result = await getResource(id);
-      const resource = result.data;
-
-      setSelectedId(resource.id);
-      setTitle(resource.title);
-      setContent(resource.content);
-      setStatus(resource.status);
-      setPinnedYn(resource.pinnedYn);
-
-      setFormMode("edit");
-      setFormOpen(true);
-    } catch (error) {
-      handleApiError(error, {
-        showError,
-        fallbackMessage: "자료실 상세 조회에 실패했습니다.",
-      });
-    } finally {
-      hideLoading();
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!title.trim()) {
-      showError("제목을 입력해주세요.");
-      return;
-    }
-
-    if (!content.trim()) {
-      showError("내용을 입력해주세요.");
-      return;
-    }
-
-    showLoading();
-    try {
-      const payload = {
-        title,
-        content,
-        status,
-        pinnedYn,
-      };
-
-      if (formMode === "create") {
-        const result = await createResource(payload);
-        const resourceId = result.data;
-
-        for (let i = 0; i < attachments.length; i += 1) {
-          await linkAttachment({
-            attachmentId: attachments[i].id,
-            targetType: "RESOURCE",
-            targetId: resourceId,
-            sortOrder: i,
-          });
-        }
-        showSuccess("자료실이 등록되었습니다.");
-      } else if (selectedId != null) {
-        await updateResource(selectedId, payload);
-        showSuccess("자료실이 수정되었습니다.");
-      }
-
-      setFormOpen(false);
-      resetForm();
-      await load();
-    } catch (error) {
-      handleApiError(error, {
-        showError,
-        fallbackMessage:
-          formMode === "create"
-            ? "자료실 등록에 실패했습니다."
-            : "자료실 수정에 실패했습니다.",
-      });
-    } finally {
-      hideLoading();
-    }
-  };
-
-  // 파일업로드 핸들러
-  const handleUploadAttachment = async (file: File) => {
-    const result = await uploadAttachment(file);
-    setAttachments((prev) => [...prev, result.data]);
-  };
-
-  // 파일제거 핸들러
-  const handleRemoveAttachment = (fileId: number) => {
-    setAttachments((prev) => prev.filter((file) => file.id !== fileId));
-  };
-
-  const columns: DataTableColumn<ResourceResponse>[] = [
-    { key: "id", header: "ID", render: (row) => row.id },
-    { key: "title", header: "제목", render: (row) => row.title },
-    { key: "status", header: "상태", render: (row) => row.status },
-    { key: "pinnedYn", header: "상단 고정", render: (row) => row.pinnedYn },
-    { key: "viewCnt", header: "조회수", render: (row) => row.viewCnt },
-    { key: "createdAt", header: "등록일시", render: (row) => row.createdAt },
-    {
-      key: "action",
-      header: "액션",
-      render: (row) => (
-        <Box display="flex" gap={1}>
-          <AppButton
-            onClick={() => router.push(`/dashboard/resources/${row.id}`)}
-          >
-            상세
-          </AppButton>
-        </Box>
-      ),
+export default function WebResourcesPage() {
+  const { showInfo } = useFeedback();
+  const [page, setPage] = useState(1);
+  const [searchTitle, setSearchTitle] = useState("");
+  const [searchParam, setSearchParam] = useState<
+    PageRequest<ResourceSearchCondition>
+  >({
+    page,
+    size: 10,
+    condition: {
+      title: searchTitle,
     },
-  ];
+  });
+
+  const queryClient = useQueryClient();
+  const search = useQuery({
+    queryKey: queryKeys.resource(searchParam),
+    queryFn: () => searchWebResources(searchParam),
+  });
+  const rows = search.data?.data.items ?? [];
+  const totalPages = search.data?.data.totalPages ?? 0;
+  const totalCount = search.data?.data.totalCount ?? 0;
+  const rerfesh = () => {
+    queryClient.invalidateQueries({ queryKey: ["resource"] });
+  };
+
+  const handleSearch = async () => {
+    setPage(1);
+    setSearchParam((prev) => ({
+      ...prev,
+      condition: {
+        ...prev.condition,
+        title: searchTitle,
+      },
+    }));
+    showInfo("검색 조건이 적용되었습니다.");
+    rerfesh();
+  };
+
+  const handleRefresh = async () => {
+    setPage(1);
+    setSearchTitle("");
+    setSearchParam({
+      page: 1,
+      size: 10,
+      condition: {
+        title: "",
+      },
+    });
+    showInfo("검색이 완료되었습니다.");
+  };
 
   return (
-    <>
-      <PageHeader title="자료실 관리" description={`전체 ${rows.length}건`} />
-
-      <DataTable
-        rows={rows}
-        columns={columns}
-        loading={loading}
-        emptyMessage="자료실 데이터가 없습니다."
+    <Box maxWidth={960} mx="auto" py={4}>
+      <PageHeader
+        title="자료실"
+        description={`전체 ${totalCount}건`}
+        actions={
+          <Stack display="flex" direction="row" spacing={1}>
+            <TextField
+              label="제목"
+              value={searchTitle}
+              size="small"
+              onChange={(e) => setSearchTitle(e.target.value)}
+              fullWidth
+            />
+            <AppButton
+              sx={{ whiteSpace: "nowrap" }}
+              size="small"
+              onClick={handleRefresh}
+            >
+              초기화
+            </AppButton>
+            <AppButton
+              sx={{ whiteSpace: "nowrap" }}
+              size="small"
+              onClick={handleSearch}
+            >
+              검색
+            </AppButton>
+          </Stack>
+        }
       />
-    </>
+
+      <Stack spacing={1.5}>
+        {rows.map((resource) => (
+          <Paper key={resource.id} variant="outlined" sx={{ p: 2 }}>
+            <Link
+              href={`/dashboard/resources/${resource.id}`}
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <Typography variant="h6" fontWeight={600}>
+                {resource.pinnedYn === "Y" ? "[고정] " : ""}
+                {resource.title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                조회수 {resource.viewCnt} · {resource.createdAt}
+              </Typography>
+            </Link>
+          </Paper>
+        ))}
+      </Stack>
+
+      <Box display="flex" justifyContent="center" mt={3}>
+        <Pagination
+          page={page}
+          count={Math.max(totalPages, 1)}
+          onChange={(_, value) => setPage(value)}
+          color="primary"
+        />
+      </Box>
+    </Box>
   );
 }

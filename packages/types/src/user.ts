@@ -39,3 +39,13 @@ export interface UserUpdateCondition {
   userId: string;
   userNm: string;
 }
+
+export interface WebMenuResponse {
+  id: number;
+  menuNm: string;
+  menuPath: string | null;
+  apiPath: string | null;
+  parentId: number | null;
+  sortOrder: number;
+  children: WebMenuResponse[];
+}

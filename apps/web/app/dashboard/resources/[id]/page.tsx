@@ -1,126 +1,119 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Button, Divider, Paper, Stack, Typography } from "@mui/material";
 import { useParams, useRouter } from "next/navigation";
-import { getResource, getAttachmentsByTarget, handleApiError } from "@repo/api";
-import type { ResourceResponse, AttachmentResponse } from "@repo/types";
-import { PageHeader, RichTextViewer, useFeedback } from "@repo/ui";
+import {
+  downloadAttachmentFile,
+  getWebAttachmentsByTarget,
+  getWebResource,
+  handleApiError,
+  viewAttachmentFile,
+} from "@repo/api";
+import type { AttachmentResponse, ResourceResponse } from "@repo/types";
+import { AttachmentList, RichTextViewer, useFeedback } from "@repo/ui";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
-
-export default function ResourceDetailPage() {
+export default function WebResourceDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { showError } = useFeedback();
 
   const [resource, setResource] = useState<ResourceResponse | null>(null);
   const [attachments, setAttachments] = useState<AttachmentResponse[]>([]);
-  const [loading, setLoading] = useState(false);
 
+  const loadedRef = useRef(false);
   useEffect(() => {
+    if (!params.id) return;
+    if (loadedRef.current) return;
+
+    loadedRef.current = true;
+
     const load = async () => {
-      if (!params.id) return;
+      const id = Number(params.id);
 
-      setLoading(true);
-      try {
-        const [resourceResult, attachmentResult] = await Promise.all([
-          getResource(Number(params.id)),
-          getAttachmentsByTarget("RESOURCE", Number(params.id)),
-        ]);
+      const [noticeResult, attachmentResult] = await Promise.all([
+        getWebResource(id),
+        getWebAttachmentsByTarget("NOTICE", id),
+      ]);
 
-        setResource(resourceResult.data);
-        setAttachments(attachmentResult.data);
-      } catch (error) {
-        handleApiError(error, {
-          showError,
-          fallbackMessage: "자료실 상세 조회에 실패했습니다.",
-        });
-      } finally {
-        setLoading(false);
-      }
+      setResource(noticeResult.data);
+      setAttachments(attachmentResult.data);
     };
 
     load();
-  }, [params.id, showError]);
+  }, [params.id]);
 
+  if (!resource) return null;
+
+  const handleDownload = async (attachmentId: number) => {
+    try {
+      const { blob, fileName } = await downloadAttachmentFile(attachmentId);
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      handleApiError(error, {
+        showError,
+        fallbackMessage: "첨부파일 다운로드에 실패했습니다.",
+      });
+    }
+  };
+
+  const handlePreviewImage = async (attachmentId: number) => {
+    const blob = await viewAttachmentFile(attachmentId);
+    return URL.createObjectURL(blob);
+  };
   return (
-    <>
-      <PageHeader
-        title="자료실 상세"
-        description={resource?.title ?? ""}
-        actions={
-          <Button
-            variant="outlined"
-            onClick={() => router.push("/dashboard/resources")}
-          >
-            목록
-          </Button>
-        }
-      />
+    <Box maxWidth={960} mx="auto" py={4}>
+      <Button
+        variant="outlined"
+        onClick={() => router.push("/dashboard/resources")}
+      >
+        목록
+      </Button>
 
-      {loading ? <Typography>불러오는 중...</Typography> : null}
+      <Paper variant="outlined" sx={{ p: 3, mt: 2 }}>
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="h4" fontWeight={700}>
+              {resource.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mt={1}>
+              조회수 {resource.viewCnt} · {resource.createdAt}
+            </Typography>
+          </Box>
 
-      {resource ? (
-        <Paper variant="outlined" sx={{ p: 3 }}>
-          <Stack spacing={2}>
-            <Box>
-              <Typography variant="h5" fontWeight={700}>
-                {resource.title}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" mt={1}>
-                상태: {resource.status} / 상단고정: {resource.pinnedYn}
-              </Typography>
+          <Divider />
+
+          <RichTextViewer html={resource.content} />
+
+          <Divider />
+
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700} mb={1}>
+              첨부파일
+            </Typography>
+
+            {attachments.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
-                작성일시: {resource.createdAt}
+                첨부파일이 없습니다.
               </Typography>
-            </Box>
-
-            <Divider />
-
-            <RichTextViewer html={resource.content} />
-
-            <Divider />
-
-            <Box>
-              <Typography variant="subtitle1" fontWeight={600} mb={1}>
-                첨부파일
-              </Typography>
-
-              {attachments.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  첨부파일이 없습니다.
-                </Typography>
-              ) : (
-                <Stack spacing={1}>
-                  {attachments.map((file) => (
-                    <Box
-                      key={file.id}
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography variant="body2">
-                        {file.originalFileNm}
-                      </Typography>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        component="a"
-                        href={`${API_BASE_URL}/admin/attachments/${file.id}/download`}
-                        target="_blank"
-                      >
-                        다운로드
-                      </Button>
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-            </Box>
-          </Stack>
-        </Paper>
-      ) : null}
-    </>
+            ) : (
+              <AttachmentList
+                files={attachments}
+                onDownload={handleDownload}
+                onPreviewImage={handlePreviewImage}
+              />
+            )}
+          </Box>
+        </Stack>
+      </Paper>
+    </Box>
   );
 }

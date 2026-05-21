@@ -4,11 +4,20 @@ import type {
   ResourceResponse,
   CreateResourceRequest,
   UpdateResourceRequest,
+  PageRequest,
+  ResourceSearchCondition,
 } from "../../types";
 
-export async function getResources() {
-  const response =
-    await apiClient.get<ApiResponse<ResourceResponse[]>>("/admin/resources");
+export async function getResources(
+  payload: PageRequest<ResourceSearchCondition>,
+) {
+  const response = await apiClient.get("/admin/resources", {
+    params: {
+      page: payload.page,
+      size: payload.size,
+      title: payload.condition?.title || undefined,
+    },
+  });
   return response.data;
 }
 

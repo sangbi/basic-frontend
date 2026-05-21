@@ -1,11 +1,15 @@
 "use client";
 
 import { NoticeFormDialog } from "@/components/Notice/NoticeFormDialog";
+import { CODE_GROUPS } from "@/features/code/codeGroups";
+import { useCodes } from "@/features/code/useCodes";
 import { usePermission } from "@/features/permission/usePermission";
-import { Box } from "@mui/material";
+import { queryKeys } from "@/src/lib/queryKeys";
+import { Box, Pagination, TextField } from "@mui/material";
 import {
   createNotice,
   deleteAttachmentFromTarget,
+  deleteNotice,
   getAttachmentsByTarget,
   getNotice,
   getNotices,
@@ -14,26 +18,33 @@ import {
   updateNotice,
   uploadAttachment,
 } from "@repo/api";
-import type { AttachmentResponse, NoticeResponse } from "@repo/types";
+import type {
+  AttachmentResponse,
+  NoticeResponse,
+  NoticeSearchCondition,
+  PageRequest,
+} from "@repo/types";
 import {
   AppButton,
   DataTable,
   type DataTableColumn,
   PageHeader,
   resolveUploadErrorMessage,
+  SearchPanel,
   UploadErrorItem,
   UploadingFile,
   useFeedback,
   validateUploadFile,
 } from "@repo/ui";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function NoticesPage() {
   const router = useRouter();
-  const [rows, setRows] = useState<NoticeResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-
+  const [loading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [searchTitle, setSearchTitle] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -47,28 +58,37 @@ export default function NoticesPage() {
   const [newAttachmentIds, setNewAttachmentIds] = useState<number[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [uploadErrors, setUploadErrors] = useState<UploadErrorItem[]>([]);
+  const [searchParam, setSearchParam] = useState<
+    PageRequest<NoticeSearchCondition>
+  >({
+    page,
+    size: 10,
+    condition: {
+      title: searchTitle,
+    },
+  });
+  const queryClient = useQueryClient();
+  const search = useQuery({
+    queryKey: queryKeys.notices(searchParam),
+    queryFn: () => getNotices(searchParam),
+  });
 
-  const { canCreate, canUpdate } = usePermission("/dashboard/notices");
-  const { showError, showSuccess, showLoading, hideLoading } = useFeedback();
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const result = await getNotices();
-      setRows(result.data);
-    } catch (error) {
-      handleApiError(error, {
-        showError,
-        fallbackMessage: "공지사항 목록 조회에 실패했습니다.",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const rows = search.data?.data.items ?? [];
+  const totalPages = search.data?.data.totalPages ?? 0;
+  const totalCount = search.data?.data.totalCount ?? 0;
+  const rerfesh = () => {
+    queryClient.invalidateQueries({ queryKey: ["notices"] });
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  const { canCreate, canUpdate, canDelete } =
+    usePermission("/dashboard/notices");
+
+  const { options: noticeTypeOptions, getCodeNm: getNoticeTypeNm } = useCodes(
+    CODE_GROUPS.NOTICE_TYPE,
+  );
+
+  const { showError, showSuccess, showLoading, hideLoading, showInfo } =
+    useFeedback();
 
   const resetForm = () => {
     setSelectedId(null);
@@ -84,6 +104,7 @@ export default function NoticesPage() {
 
   const openCreateDialog = () => {
     resetForm();
+    setNoticeType(noticeTypeOptions[0]?.value ?? "GENERAL");
     setFormMode("create");
     setFormOpen(true);
   };
@@ -170,7 +191,7 @@ export default function NoticesPage() {
 
       setFormOpen(false);
       resetForm();
-      await load();
+      rerfesh();
     } catch (error) {
       handleApiError(error, {
         showError,
@@ -294,10 +315,57 @@ export default function NoticesPage() {
     }
   };
 
+  const handleSearch = async () => {
+    setPage(1);
+    setSearchParam((prev) => ({
+      ...prev,
+      condition: {
+        ...prev.condition,
+        title: searchTitle,
+      },
+    }));
+    showInfo("검색 조건이 적용되었습니다.");
+    rerfesh();
+  };
+
+  const handleRefresh = async () => {
+    setPage(1);
+    setTitle("");
+    setSearchParam({
+      page: 1,
+      size: 10,
+      condition: {
+        title: "",
+      },
+    });
+    showInfo("검색이 완료되었습니다.");
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("공지사항을 삭제하시겠습니까?")) return;
+
+    showLoading();
+    try {
+      await deleteNotice(id);
+      showSuccess("공지사항이 삭제되었습니다.");
+      rerfesh();
+    } catch (error) {
+      handleApiError(error, {
+        showError,
+        fallbackMessage: "공지사항 삭제에 실패했습니다.",
+      });
+    } finally {
+      hideLoading();
+    }
+  };
   const columns: DataTableColumn<NoticeResponse>[] = [
     { key: "id", header: "ID", render: (row) => row.id },
     { key: "title", header: "제목", render: (row) => row.title },
-    { key: "noticeType", header: "유형", render: (row) => row.noticeType },
+    {
+      key: "noticeType",
+      header: "유형",
+      render: (row) => getNoticeTypeNm(row.noticeType),
+    },
     { key: "status", header: "상태", render: (row) => row.status },
     { key: "pinnedYn", header: "상단 고정", render: (row) => row.pinnedYn },
     { key: "viewCnt", header: "조회수", render: (row) => row.viewCnt },
@@ -312,8 +380,13 @@ export default function NoticesPage() {
           >
             상세
           </AppButton>
+
           {canUpdate ? (
             <AppButton onClick={() => openEditDialog(row.id)}>수정</AppButton>
+          ) : null}
+
+          {canDelete ? (
+            <AppButton onClick={() => handleDelete(row.id)}>삭제</AppButton>
           ) : null}
         </Box>
       ),
@@ -324,20 +397,46 @@ export default function NoticesPage() {
     <>
       <PageHeader
         title="공지사항 관리"
-        description={`전체 ${rows.length}건`}
+        description={`전체 ${totalCount}건`}
         actions={
           canCreate ? (
             <AppButton onClick={openCreateDialog}>등록</AppButton>
           ) : null
         }
       />
+      <SearchPanel
+        actions={
+          <>
+            <AppButton onClick={handleRefresh}>초기화</AppButton>
+            <AppButton onClick={handleSearch}>검색</AppButton>
+          </>
+        }
+      >
+        <Box display="flex" gap={2}>
+          <TextField
+            label="제목"
+            value={searchTitle}
+            onChange={(e) => setSearchTitle(e.target.value)}
+            fullWidth
+          />
+        </Box>
+      </SearchPanel>
 
       <DataTable
         rows={rows}
         columns={columns}
         loading={loading}
         emptyMessage="공지사항 데이터가 없습니다."
+        totalCnt={totalCount}
       />
+      <Box mt={3} display="flex" justifyContent="center" alignItems="center">
+        <Pagination
+          page={page}
+          count={Math.max(totalPages, 1)}
+          onChange={(_, value) => setPage(value)}
+          color="primary"
+        />
+      </Box>
 
       <NoticeFormDialog
         open={formOpen}
@@ -350,6 +449,7 @@ export default function NoticesPage() {
         attachments={attachments}
         uploadingFiles={uploadingFiles}
         uploadErrors={uploadErrors}
+        noticeTypeOptions={noticeTypeOptions}
         onChangeTitle={setTitle}
         onChangeContent={setContent}
         onChangeNoticeType={setNoticeType}

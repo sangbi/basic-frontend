@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Paper, Stack } from "@mui/material";
 import {
   AppButton,
@@ -88,7 +88,7 @@ export default function CodesPage() {
     setCodes(result.data);
   };
 
-  const initialize = async () => {
+  const initialize = useCallback(async () => {
     try {
       showLoading();
       await loadGroups();
@@ -101,20 +101,11 @@ export default function CodesPage() {
     } finally {
       hideLoading();
     }
-  };
+  }, [hideLoading, selectedGroupCode, showError, showLoading]);
 
   useEffect(() => {
     initialize();
-  }, []);
-
-  useEffect(() => {
-    loadCodes(selectedGroupCode || undefined).catch((error) => {
-      handleApiError(error, {
-        showError,
-        fallbackMessage: "코드 목록 조회에 실패했습니다.",
-      });
-    });
-  }, [selectedGroupCode]);
+  }, [initialize]);
 
   const resetGroupForm = () => {
     setEditingGroupId(null);

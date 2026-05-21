@@ -1,31 +1,34 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { MenuFormDialog } from "@/components/Menu/MenuFormDialog";
+import { usePermission } from "@/features/permission/usePermission";
 import { Box } from "@mui/material";
-import {
-  AppButton,
-  DataTable,
-  type DataTableColumn,
-  PageHeader,
-  useFeedback,
-} from "@repo/ui";
 import {
   createMenu,
   getMenu,
   getMenus,
-  updateMenu,
+  getMenuSets,
   handleApiError,
+  updateMenu,
 } from "@repo/api";
-import type { MenuResponse } from "@repo/types";
-import { MenuFormDialog } from "@/components/Menu/MenuFormDialog";
-import { usePermission } from "@/features/permission/usePermission";
+import type { CreateMenuRequest, MenuResponse } from "@repo/types";
+import { MenuSetResponse } from "@repo/types/src/admin";
+import {
+  AppButton,
+  DataTable,
+  type DataTableColumn,
+  FormSelectField,
+  PageHeader,
+  useFeedback,
+} from "@repo/ui";
+import { useCallback, useEffect, useState } from "react";
 
 export default function MenusPage() {
   const {
     canCreate,
     canUpdate,
-    canDelete,
-    loading: permissionLoading,
+    // canDelete,
+    // loading: permissionLoading,
   } = usePermission("/dashboard/menus");
   const [rows, setRows] = useState<MenuResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -34,6 +37,9 @@ export default function MenusPage() {
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
+  const [menuSets, setMenuSets] = useState<MenuSetResponse[]>([]);
+  const [selectedMenuSetCd, setSelectedMenuSetCd] = useState("ADMIN");
+  const [menuSetId, setMenuSetId] = useState("");
   const [menuNm, setMenuNm] = useState("");
   const [menuPath, setMenuPath] = useState("");
   const [apiPath, setApiPath] = useState("");
@@ -47,24 +53,46 @@ export default function MenusPage() {
 
   const menuMap = new Map(rows.map((row) => [row.id, row]));
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await getMenus();
-      setRows(result.data);
-    } catch (error) {
-      handleApiError(error, {
-        showError,
-        fallbackMessage: "메뉴 목록 조회에 실패했습니다.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [showError]);
+  const menuSetOptions = menuSets.map((set) => ({
+    label: set.menuSetNm,
+    value: String(set.id),
+  }));
+
+  const menuSetFilterOptions = menuSets.map((set) => ({
+    label: set.menuSetNm,
+    value: set.menuSetCd,
+  }));
+
+  const loadMenuSets = async () => {
+    const result = await getMenuSets();
+    setMenuSets(result.data);
+  };
+
+  const load = useCallback(
+    async (menuSetCd: string) => {
+      setLoading(true);
+      try {
+        const result = await getMenus(menuSetCd);
+        setRows(result.data);
+      } catch (error) {
+        handleApiError(error, {
+          showError,
+          fallbackMessage: "메뉴 목록 조회에 실패했습니다.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showError],
+  );
 
   useEffect(() => {
-    load();
-  }, [load]);
+    load(selectedMenuSetCd);
+  }, [load, selectedMenuSetCd]);
+
+  useEffect(() => {
+    loadMenuSets();
+  }, []);
 
   const resetForm = () => {
     setSelectedId(null);
@@ -76,13 +104,19 @@ export default function MenusPage() {
     setIcon("");
     setVisibleYn("Y");
     setStatus("ACTIVE");
+    setMenuSetId(selectedMenuSet ? String(selectedMenuSet.id) : "");
   };
 
   const openCreateDialog = () => {
     resetForm();
+    setMenuSetId(selectedMenuSet ? String(selectedMenuSet.id) : "");
     setFormMode("create");
     setFormOpen(true);
   };
+
+  const selectedMenuSet = menuSets.find(
+    (set) => set.menuSetCd === selectedMenuSetCd,
+  );
 
   const openEditDialog = async (id: number) => {
     showLoading();
@@ -99,6 +133,7 @@ export default function MenusPage() {
       setIcon(menu.icon ?? "");
       setVisibleYn(menu.visibleYn);
       setStatus(menu.status);
+      setMenuSetId(String(menu.menuSetId));
 
       setFormMode("edit");
       setFormOpen(true);
@@ -120,7 +155,7 @@ export default function MenusPage() {
 
     showLoading();
     try {
-      const payload = {
+      const payload: CreateMenuRequest = {
         menuNm: menuNm,
         menuPath,
         apiPath,
@@ -129,6 +164,7 @@ export default function MenusPage() {
         icon,
         visibleYn,
         status,
+        menuSetId: Number(menuSetId),
       };
 
       if (formMode === "create") {
@@ -141,7 +177,7 @@ export default function MenusPage() {
 
       setFormOpen(false);
       resetForm();
-      await load();
+      await load(selectedMenuSetCd);
     } catch (error) {
       handleApiError(error, {
         showError,
@@ -183,9 +219,11 @@ export default function MenusPage() {
       header: "액션",
       render: (row) => (
         <Box display="flex" gap={1}>
-          {canUpdate && (
-            <AppButton onClick={() => openEditDialog(row.id)}>수정</AppButton>
-          )}
+          {canUpdate ? (
+            <>
+              <AppButton onClick={() => openEditDialog(row.id)}>수정</AppButton>
+            </>
+          ) : null}
         </Box>
       ),
     },
@@ -203,9 +241,23 @@ export default function MenusPage() {
         title="메뉴 관리"
         description={`전체 ${rows.length}건`}
         actions={
-          canCreate && <AppButton onClick={openCreateDialog}>등록</AppButton>
+          <Box display="flex" gap={1}>
+            {canCreate ? (
+              <AppButton onClick={openCreateDialog}>등록</AppButton>
+            ) : null}
+          </Box>
         }
       />
+
+      <Box maxWidth={320} mb={1}>
+        <FormSelectField
+          label="메뉴 묶음"
+          sx={{ width: 300, mb: 2 }}
+          value={selectedMenuSetCd}
+          onChange={(e) => setSelectedMenuSetCd(e.target.value)}
+          options={menuSetFilterOptions}
+        />
+      </Box>
 
       <DataTable
         rows={rows}
@@ -217,6 +269,7 @@ export default function MenusPage() {
       <MenuFormDialog
         open={formOpen}
         mode={formMode}
+        menuSetId={menuSetId}
         menuNm={menuNm}
         menuPath={menuPath}
         apiPath={apiPath}
@@ -225,7 +278,9 @@ export default function MenusPage() {
         icon={icon}
         visibleYn={visibleYn}
         status={status}
+        menuSetOptions={menuSetOptions}
         parentOptions={parentOptions}
+        onChangeMenuSetId={setMenuSetId}
         onChangeMenuNm={setMenuNm}
         onChangeMenuPath={setMenuPath}
         onChangeApiPath={setApiPath}

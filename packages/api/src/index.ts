@@ -8,3 +8,4 @@ export * from "./notice";
 export * from "./resource";
 export * from "./attachment";
 export * from "./code";
+export * from "./web";

@@ -61,6 +61,9 @@ export interface MenuResponse {
   icon: string | null;
   visibleYn: string;
   status: string;
+  menuSetId: number;
+  menuSetCode: string;
+  menuSetName: string;
 }
 
 export interface MenuRoleResponse {
@@ -123,6 +126,7 @@ export interface CreateMenuRequest {
   icon: string;
   visibleYn: string;
   status: string;
+  menuSetId: number;
 }
 
 export interface UpdateMenuRequest {
@@ -134,6 +138,7 @@ export interface UpdateMenuRequest {
   icon: string;
   visibleYn: string;
   status: string;
+  menuSetId: number;
 }
 
 export interface MyMenuPermissionResponse {
@@ -143,4 +148,12 @@ export interface MyMenuPermissionResponse {
   canCreate: string;
   canUpdate: string;
   canDelete: string;
+}
+
+export interface MenuSetResponse {
+  id: number;
+  menuSetCd: string;
+  menuSetNm: string;
+  description: string | null;
+  status: string;
 }

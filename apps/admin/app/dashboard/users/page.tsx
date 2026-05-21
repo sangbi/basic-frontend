@@ -3,7 +3,7 @@
 import { UserFormDialog } from "@/components/User/UserFormDialog";
 import { usePermission } from "@/features/permission/usePermission";
 import { queryKeys } from "@/src/lib/queryKeys";
-import { Box, Pagination, TextField, Typography } from "@mui/material";
+import { Box, Pagination, TextField } from "@mui/material";
 import {
   createUser,
   deleteUser,
@@ -36,7 +36,7 @@ export default function UsersPage() {
     canCreate,
     canUpdate,
     canDelete,
-    loading: permissionLoading,
+    // loading: permissionLoading,
   } = usePermission("/dashboard/users");
 
   const [userId, setUserId] = useState<string>("");

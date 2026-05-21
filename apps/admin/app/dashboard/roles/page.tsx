@@ -24,8 +24,8 @@ export default function RolesPage() {
   const {
     canCreate,
     canUpdate,
-    canDelete,
-    loading: permissionLoading,
+    // canDelete,
+    // loading: permissionLoading,
   } = usePermission("/dashboard/roles");
   const [rows, setRows] = useState<RoleResponse[]>([]);
   const [loading, setLoading] = useState(false);

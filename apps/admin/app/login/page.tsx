@@ -5,7 +5,7 @@ import { handleApiError, login } from "@repo/api";
 import { tokenStorage } from "@repo/auth";
 import { AppButton } from "@repo/ui";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +13,8 @@ export default function LoginPage() {
   const [userId, setUserId] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState(false);
+
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   // 로그인 함수
   const handleLogin = async () => {
@@ -47,13 +49,24 @@ export default function LoginPage() {
           label="아이디"
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              passwordRef.current?.focus();
+            }
+          }}
         />
 
         <TextField
           label="비밀번호"
           type="password"
           value={password}
+          inputRef={passwordRef}
           onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              handleLogin();
+            }
+          }}
         />
 
         <AppButton onClick={handleLogin} disabled={loading}>

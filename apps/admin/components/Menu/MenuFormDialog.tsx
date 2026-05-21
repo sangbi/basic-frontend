@@ -17,6 +17,7 @@ type SelectOption = {
 type Props = {
   open: boolean;
   mode: "create" | "edit";
+  menuSetId: string;
   menuNm: string;
   menuPath: string;
   apiPath: string;
@@ -25,8 +26,10 @@ type Props = {
   icon: string;
   visibleYn: string;
   status: string;
+  menuSetOptions: SelectOption[];
   parentOptions: SelectOption[];
   loading?: boolean;
+  onChangeMenuSetId: (value: string) => void;
   onChangeMenuNm: (value: string) => void;
   onChangeMenuPath: (value: string) => void;
   onChangeApiPath: (value: string) => void;
@@ -42,6 +45,7 @@ type Props = {
 export function MenuFormDialog({
   open,
   mode,
+  menuSetId,
   menuNm,
   menuPath,
   apiPath,
@@ -50,8 +54,10 @@ export function MenuFormDialog({
   icon,
   visibleYn,
   status,
+  menuSetOptions,
   parentOptions,
   loading = false,
+  onChangeMenuSetId,
   onChangeMenuNm,
   onChangeMenuPath,
   onChangeApiPath,
@@ -69,6 +75,13 @@ export function MenuFormDialog({
 
       <DialogContent>
         <FormSection title="메뉴 정보">
+          <FormSelectField
+            label="메뉴 묶음"
+            value={menuSetId}
+            onChange={(e) => onChangeMenuSetId(e.target.value)}
+            options={menuSetOptions}
+          />
+
           <FormTextField
             label="메뉴명"
             value={menuNm}

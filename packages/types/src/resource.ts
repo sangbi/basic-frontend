@@ -1,3 +1,7 @@
+export interface ResourceSearchCondition {
+  title?: string;
+}
+
 export interface ResourceResponse {
   id: number;
   title: string;
